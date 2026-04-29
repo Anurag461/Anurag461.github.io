@@ -1,0 +1,38 @@
+---
+layout: default
+title: Projects
+permalink: /projects/
+---
+
+<div class="container">
+  <section class="hero">
+    <div class="hero-eyebrow">Work</div>
+    <h1>Projects</h1>
+    <p class="hero-lede">Things I've built — research code, tooling, and side projects.</p>
+  </section>
+
+  <section class="section">
+    <ul class="entry-list">
+      {% assign projects = site.projects | sort: 'date' | reverse %}
+      {% for proj in projects %}
+      <li class="entry">
+        <div class="entry-meta">{{ proj.date | date: "%Y" }}</div>
+        <div>
+          <h3 class="entry-title"><a href="{{ proj.url | relative_url }}">{{ proj.title }}</a></h3>
+          <p class="entry-desc">{{ proj.description }}</p>
+          {% if proj.tags %}
+          <div class="entry-tags">
+            {% for t in proj.tags %}<span class="tag">{{ t }}</span>{% endfor %}
+          </div>
+          {% endif %}
+          <div class="entry-links">
+            {% if proj.github %}<a href="{{ proj.github }}">github</a>{% endif %}
+            {% if proj.demo %}<a href="{{ proj.demo }}">demo</a>{% endif %}
+            {% if proj.paper %}<a href="{{ proj.paper }}">paper</a>{% endif %}
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>

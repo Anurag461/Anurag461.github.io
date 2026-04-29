@@ -1,0 +1,22 @@
+---
+layout: default
+---
+<div class="container">
+  <article>
+    <header class="article-header">
+      <div class="article-meta">Publication · {{ page.year }}</div>
+      <h1>{{ page.title }}</h1>
+      <p class="entry-desc">{{ page.authors }}</p>
+      <p class="entry-desc"><em>{{ page.venue }}</em></p>
+      <div class="entry-links">
+        {% if page.arxiv %}<a href="{{ page.arxiv }}">arXiv</a>{% endif %}
+        {% if page.pdf %}<a href="{{ page.pdf }}">pdf</a>{% endif %}
+        {% if page.code %}<a href="{{ page.code }}">code</a>{% endif %}
+        {% if page.openreview %}<a href="{{ page.openreview }}">OpenReview</a>{% endif %}
+      </div>
+    </header>
+    <div class="article-content">
+      {{ content }}
+    </div>
+  </article>
+</div>

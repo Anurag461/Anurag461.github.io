@@ -1,0 +1,36 @@
+---
+layout: default
+title: Publications
+permalink: /publications/
+---
+
+<div class="container">
+  <section class="hero">
+    <div class="hero-eyebrow">Research</div>
+    <h1>Publications</h1>
+    <p class="hero-lede">
+      A list of papers I've contributed to. See <a href="https://scholar.google.com/citations?user={{ site.scholar_id }}">Google Scholar</a> for the most current list.
+    </p>
+  </section>
+
+  <section class="section">
+    <ul class="entry-list">
+      {% assign pubs = site.publications | sort: 'year' | reverse %}
+      {% for pub in pubs %}
+      <li class="entry">
+        <div class="entry-meta">{{ pub.year }}</div>
+        <div>
+          <h3 class="entry-title">{{ pub.title }}</h3>
+          <p class="entry-desc">{{ pub.authors }}<br /><em>{{ pub.venue }}</em></p>
+          <div class="entry-links">
+            {% if pub.arxiv %}<a href="{{ pub.arxiv }}">arXiv</a>{% endif %}
+            {% if pub.pdf %}<a href="{{ pub.pdf }}">pdf</a>{% endif %}
+            {% if pub.code %}<a href="{{ pub.code }}">code</a>{% endif %}
+            {% if pub.openreview %}<a href="{{ pub.openreview }}">OpenReview</a>{% endif %}
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>

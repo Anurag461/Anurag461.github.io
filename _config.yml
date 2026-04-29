@@ -1,0 +1,61 @@
+# Site
+title: Anurag Kashyap
+tagline: Applied Scientist
+description: Applied Scientist at Amazon. ML research, agent benchmarking, post-training infrastructure.
+author: Anurag Kashyap
+url: "https://anuragkashyap.github.io"
+baseurl: ""
+
+# Author / contact
+email: # add your public email if desired
+github_username: anuragkashyap
+linkedin_username: kashyapanurag
+scholar_id: 79WTmDwAAAAJ
+twitter_username: # optional
+affiliation: Amazon
+
+# Build
+markdown: kramdown
+highlighter: rouge
+permalink: /blog/:year/:month/:day/:title/
+timezone: America/Los_Angeles
+
+# Collections
+collections:
+  projects:
+    output: true
+    permalink: /projects/:path/
+  publications:
+    output: true
+    permalink: /publications/:path/
+
+defaults:
+  - scope:
+      path: ""
+      type: posts
+    values:
+      layout: post
+  - scope:
+      path: ""
+      type: projects
+    values:
+      layout: project
+  - scope:
+      path: ""
+      type: publications
+    values:
+      layout: publication
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# Exclude from build
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - vendor
+  - node_modules

@@ -1,0 +1,34 @@
+---
+layout: default
+title: Writing
+permalink: /blog/
+---
+
+<div class="container">
+  <section class="hero">
+    <div class="hero-eyebrow">Notes</div>
+    <h1>Writing</h1>
+    <p class="hero-lede">Occasional notes on machine learning, systems, and research.</p>
+  </section>
+
+  <section class="section">
+    <ul class="entry-list">
+      {% for post in site.posts %}
+      <li class="entry">
+        <div class="entry-meta">{{ post.date | date: "%b %d, %Y" }}</div>
+        <div>
+          <h3 class="entry-title"><a href="{{ post.url | relative_url }}">{{ post.title }}</a></h3>
+          {% if post.excerpt %}<p class="entry-desc">{{ post.excerpt | strip_html | truncatewords: 35 }}</p>{% endif %}
+          {% if post.tags %}
+          <div class="entry-tags">
+            {% for t in post.tags %}<span class="tag">{{ t }}</span>{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </li>
+      {% else %}
+      <li class="entry"><div></div><div><p class="entry-desc">No posts yet — check back soon.</p></div></li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>

@@ -1,0 +1,95 @@
+---
+layout: default
+title: Anurag Kashyap
+---
+
+<div class="container">
+  <section class="hero">
+    <div class="hero-eyebrow reveal reveal-1">Applied Scientist · Amazon</div>
+    <h1 class="reveal reveal-2">Anurag <em>Kashyap</em></h1>
+    <p class="hero-lede reveal reveal-3">
+      I work on <strong>language model post-training</strong>, evaluation, and the
+      infrastructure around training agents. My recent research focuses on benchmarking
+      and improving agent behavior in realistic environments — terminals, containers,
+      and long-context interaction.
+    </p>
+    <div class="hero-meta reveal reveal-4">
+      <a href="https://scholar.google.com/citations?user={{ site.scholar_id }}">Google Scholar</a>
+      <a href="https://github.com/{{ site.github_username }}">GitHub</a>
+      <a href="https://www.linkedin.com/in/{{ site.linkedin_username }}/">LinkedIn</a>
+      {% if site.email %}<a href="mailto:{{ site.email }}">Email</a>{% endif %}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>Selected Work</h2>
+      <a href="{{ '/publications/' | relative_url }}">All publications →</a>
+    </div>
+    <ul class="entry-list">
+      {% assign recent_pubs = site.publications | sort: 'year' | reverse | slice: 0, 4 %}
+      {% for pub in recent_pubs %}
+      <li class="entry">
+        <div class="entry-meta">{{ pub.year }}</div>
+        <div>
+          <h3 class="entry-title"><a href="{{ pub.url | relative_url }}">{{ pub.title }}</a></h3>
+          <p class="entry-desc">{{ pub.authors }}<br /><em>{{ pub.venue }}</em></p>
+          <div class="entry-links">
+            {% if pub.arxiv %}<a href="{{ pub.arxiv }}">arXiv</a>{% endif %}
+            {% if pub.pdf %}<a href="{{ pub.pdf }}">pdf</a>{% endif %}
+            {% if pub.code %}<a href="{{ pub.code }}">code</a>{% endif %}
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>Projects</h2>
+      <a href="{{ '/projects/' | relative_url }}">All projects →</a>
+    </div>
+    <ul class="entry-list">
+      {% assign recent_projects = site.projects | sort: 'date' | reverse | slice: 0, 3 %}
+      {% for proj in recent_projects %}
+      <li class="entry">
+        <div class="entry-meta">{{ proj.date | date: "%Y" }}</div>
+        <div>
+          <h3 class="entry-title"><a href="{{ proj.url | relative_url }}">{{ proj.title }}</a></h3>
+          <p class="entry-desc">{{ proj.description }}</p>
+          {% if proj.tags %}
+          <div class="entry-tags">
+            {% for t in proj.tags %}<span class="tag">{{ t }}</span>{% endfor %}
+          </div>
+          {% endif %}
+          <div class="entry-links">
+            {% if proj.github %}<a href="{{ proj.github }}">github</a>{% endif %}
+            {% if proj.demo %}<a href="{{ proj.demo }}">demo</a>{% endif %}
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {% if site.posts.size > 0 %}
+  <section class="section">
+    <div class="section-head">
+      <h2>Recent Writing</h2>
+      <a href="{{ '/blog/' | relative_url }}">All posts →</a>
+    </div>
+    <ul class="entry-list">
+      {% for post in site.posts limit:3 %}
+      <li class="entry">
+        <div class="entry-meta">{{ post.date | date: "%b %Y" }}</div>
+        <div>
+          <h3 class="entry-title"><a href="{{ post.url | relative_url }}">{{ post.title }}</a></h3>
+          {% if post.excerpt %}<p class="entry-desc">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+</div>
