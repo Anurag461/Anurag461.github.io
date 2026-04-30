@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LDPC-PRC Watermark Inspector</title>
+  <style>
+    /* Reset + iframe-friendly defaults */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #0c0d10; }
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      color: #e8e6df;
+      font-family: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+    }
+    /* Avoid layout shift while Babel compiles. */
+    #root:empty::before {
+      content: "loading visualizer...";
+      display: block;
+      padding: 40px;
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: #5a5852;
+      text-transform: uppercase;
+    }
+  </style>
+  <!-- React 18 from CDN, plus Babel for in-browser JSX compilation. -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react">
+// Standalone build for embedding in a Jekyll/HTML page.
+// React + ReactDOM + Babel are loaded from CDN by the surrounding HTML;
+// useState/useMemo are pulled off the global React.
+const { useState, useMemo } = React;
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LDPC-PRC watermark inspector — driven by REAL Qwen3-0.6B tokens + entropies.
+//
+// Replace QWEN3_DATA below with the contents of qwen3_run.json produced by
+// capture_qwen3_run.py. The artifact will then render the actual sampled
+// tokens and per-token surprisal H_e = -log_2 p(token | prefix), exactly the
+// quantity used in the watermarking analysis of the Christ–Gunn paper.
+//
+// The codeword x ∈ F_2^n itself is constructed as x = z ⊕ e for a chosen
+// small error pattern e, mirroring EncodeG(1) = Gs ⊕ z ⊕ e with PG = 0, so
+// that the demo opens with the watermark detected.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Captured from a real Qwen3-0.6B run via capture_qwen3_run.py.
+// Each entry: { text, id, H (bits = -log_2 p), H_norm (H / 10, capped at 1) }.
+// Replace this object with the contents of a different qwen3_run.json to
+// inspect a different generation.
+const QWEN3_DATA = {
+  model: "Qwen/Qwen3-0.6B",
+  prompt: "Explain in one paragraph why pseudorandom codes give undetectable watermarks.",
+  config: { temperature: 1.0, top_p: 1.0, seed: 7, max_new_tokens: 60 },
+  tokens: [
+    { text: "<think>", id: 151667, H: 0.0007, H_norm: 0.00007 },
+    { text: "\n", id:    198, H: 0.0000, H_norm: 0.00000 },
+    { text: "Okay", id:  32313, H: 0.0142, H_norm: 0.00142 },
+    { text: ",", id:     11, H: 0.0000, H_norm: 0.00000 },
+    { text: " so", id:    773, H: 0.7967, H_norm: 0.07967 },
+    { text: " the", id:    279, H: 1.0357, H_norm: 0.10357 },
+    { text: " user", id:   1196, H: 0.1727, H_norm: 0.01727 },
+    { text: " is", id:    374, H: 1.5560, H_norm: 0.15560 },
+    { text: " asking", id:  10161, H: 0.0000, H_norm: 0.00000 },
+    { text: " why", id:   3170, H: 0.0931, H_norm: 0.00931 },
+    { text: " pseud", id:  50643, H: 0.0014, H_norm: 0.00014 },
+    { text: "or", id:    269, H: 0.0000, H_norm: 0.00000 },
+    { text: "andom", id:   2206, H: 0.0000, H_norm: 0.00000 },
+    { text: " codes", id:  13912, H: 0.0007, H_norm: 0.00007 },
+    { text: " give", id:   2968, H: 0.8188, H_norm: 0.08188 },
+    { text: " und", id:   2030, H: 0.0007, H_norm: 0.00007 },
+    { text: "etect", id:  13176, H: 0.0000, H_norm: 0.00000 },
+    { text: "able", id:    480, H: 0.0000, H_norm: 0.00000 },
+    { text: " water", id:   3015, H: 0.0000, H_norm: 0.00000 },
+    { text: "marks", id:  15544, H: 0.0000, H_norm: 0.00000 },
+    { text: ".", id:     13, H: 0.0834, H_norm: 0.00834 },
+    { text: " Let", id:   6771, H: 0.2154, H_norm: 0.02154 },
+    { text: " me", id:    752, H: 0.0085, H_norm: 0.00085 },
+    { text: " break", id:   1438, H: 3.0502, H_norm: 0.30502 },
+    { text: " this", id:    419, H: 0.0092, H_norm: 0.00092 },
+    { text: " down", id:   1495, H: 0.0000, H_norm: 0.00000 },
+    { text: ".", id:     13, H: 0.3400, H_norm: 0.03400 },
+    { text: " P", id:    393, H: 4.4932, H_norm: 0.44932 },
+    { text: "seud", id:  39412, H: 0.0028, H_norm: 0.00028 },
+    { text: "or", id:    269, H: 0.0014, H_norm: 0.00014 },
+    { text: "andom", id:   2206, H: 0.0000, H_norm: 0.00000 },
+    { text: " codes", id:  13912, H: 0.0342, H_norm: 0.00342 },
+    { text: " are", id:    525, H: 0.2468, H_norm: 0.02468 },
+    { text: " like", id:   1075, H: 0.9944, H_norm: 0.09944 },
+    { text: " random", id:   4194, H: 0.5769, H_norm: 0.05769 },
+    { text: " number", id:   1372, H: 4.4264, H_norm: 0.44264 },
+    { text: " generators", id:  43063, H: 0.0670, H_norm: 0.00670 },
+    { text: " that", id:    429, H: 1.9007, H_norm: 0.19007 },
+    { text: " create", id:   1855, H: 0.6066, H_norm: 0.06066 },
+    { text: " patterns", id:  12624, H: 1.7556, H_norm: 0.17556 },
+    { text: ",", id:     11, H: 1.2056, H_norm: 0.12056 },
+    { text: " right", id:   1290, H: 0.2875, H_norm: 0.02875 },
+    { text: "?", id:     30, H: 0.0007, H_norm: 0.00007 },
+    { text: " These", id:   4220, H: 2.2585, H_norm: 0.22585 },
+    { text: " patterns", id:  12624, H: 1.3643, H_norm: 0.13643 },
+    { text: " are", id:    525, H: 0.2418, H_norm: 0.02418 },
+    { text: " designed", id:   6188, H: 3.9461, H_norm: 0.39461 },
+    { text: " to", id:    311, H: 0.2105, H_norm: 0.02105 },
+    { text: " be", id:    387, H: 0.4774, H_norm: 0.04774 },
+    { text: " similar", id:   4428, H: 6.4599, H_norm: 0.64599 },
+    { text: " to", id:    311, H: 0.0134, H_norm: 0.00134 },
+    { text: " natural", id:   5810, H: 1.5436, H_norm: 0.15436 },
+    { text: " processes", id:  11364, H: 3.6680, H_norm: 0.36680 },
+    { text: ",", id:     11, H: 0.6446, H_norm: 0.06446 },
+    { text: " so", id:    773, H: 2.1735, H_norm: 0.21735 },
+    { text: " they", id:    807, H: 0.1695, H_norm: 0.01695 },
+    { text: " can", id:    646, H: 3.8643, H_norm: 0.38643 },
+    { text: "'t", id:    944, H: 0.7652, H_norm: 0.07652 },
+    { text: " be", id:    387, H: 0.0774, H_norm: 0.00774 },
+    { text: " easily", id:   6707, H: 0.2594, H_norm: 0.02594 },
+  ],
+};
+
+// Treat tokens with normalized entropy below this as "low entropy" (greyed
+// out). With H_norm = H_bits / 10, threshold 0.01 ≈ 0.1 bits of surprisal —
+// "essentially deterministic" continuations: BPE sub-pieces of forced words,
+// trailing whitespace, expected punctuation. This is a real-data threshold:
+// at this run's distribution it greys out the truly committed positions
+// (~45% of tokens) while leaving anything with even slight choice highlighted.
+const ENTROPY_THRESHOLD = 0.01;
+
+// Decoder parameters (LDPC-PRC0).
+const T_SPARSITY = 5;           // row sparsity t of P
+const ZETA       = 0.15;        // decode threshold offset
+
+// The codeword is x = z ⊕ e for an error pattern e supported entirely on
+// LOW-ENTROPY positions. This mirrors the realistic failure mode: when a
+// language model is essentially deterministic at a position, the watermark
+// can't reliably embed signal there, so any deviation between x and z at
+// that position is effectively noise. With these particular errors the
+// detector OPENS REJECTING (wt(Px⊕Pz) above threshold). Removing parity
+// checks dominated by low-entropy columns then flips the verdict — exactly
+// the empirical-entropy filter intuition from §7 of CGZ.
+const ERROR_POSITIONS = [8, 9, 25];   // all confirmed low-entropy in this run
+
+// ─── Build P, z, x ───────────────────────────────────────────────────────────
+
+function makeRng(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 0x100000000;
+  };
+}
+function buildParityMatrix(r, n, t, seed) {
+  const rand = makeRng(seed);
+  const rows = [];
+  for (let i = 0; i < r; i++) {
+    const cols = new Set();
+    while (cols.size < t) cols.add(Math.floor(rand() * n));
+    rows.push([...cols].sort((a, b) => a - b));
+  }
+  return rows;
+}
+function buildPad(n, seed) {
+  const rand = makeRng(seed);
+  return Array.from({ length: n }, () => (rand() < 0.5 ? 0 : 1));
+}
+function buildCodeword(z, errorPositions) {
+  const errs = new Set(errorPositions);
+  return z.map((b, i) => b ^ (errs.has(i) ? 1 : 0));
+}
+
+const TOKENS = QWEN3_DATA.tokens;
+const N      = TOKENS.length;
+const R      = Math.max(8, Math.round(N * 0.6));   // r = ~0.6 n
+const P_ROWS = buildParityMatrix(R, N, T_SPARSITY, 3);  // matrix seed tuned for the demo
+const Z_PAD  = buildPad(N, 31);
+const X_BITS = buildCodeword(Z_PAD, ERROR_POSITIONS);
+
+// Per-row count of how many of the row's columns are low-entropy. A row with
+// many low-entropy columns is "low quality" — its parity bit is dominated by
+// positions that the LM essentially fixed, so it carries little watermark
+// signal regardless of x.
+const LOW_BY_TOKEN = TOKENS.map(t => t.H_norm < ENTROPY_THRESHOLD);
+const ROW_LOW_COUNT = P_ROWS.map(row => row.reduce((s, c) => s + (LOW_BY_TOKEN[c] ? 1 : 0), 0));
+
+const CHECKS_BY_COL = Array.from({ length: N }, () => []);
+P_ROWS.forEach((row, ri) => row.forEach(c => CHECKS_BY_COL[c].push(ri)));
+
+function checkParity(rowCols, x, z) {
+  let p = 0;
+  for (const j of rowCols) p ^= (x[j] ^ z[j]);
+  return p;
+}
+
+// ─── UI ──────────────────────────────────────────────────────────────────────
+
+function PRCVisualizer() {
+  const [selected, setSelected] = useState(null);
+  const [removed, setRemoved] = useState(() => new Set());
+  const [hoverCheck, setHoverCheck] = useState(null);
+
+  const checkBits = useMemo(
+    () => P_ROWS.map(row => checkParity(row, X_BITS, Z_PAD)),
+    []
+  );
+  const activeChecks = useMemo(
+    () => P_ROWS.map((_, i) => i).filter(i => !removed.has(i)),
+    [removed]
+  );
+
+  const satisfied   = activeChecks.filter(i => checkBits[i] === 0).length;
+  const totalActive = activeChecks.length;
+  const unsatisfied = totalActive - satisfied;
+  const threshold   = (0.5 - ZETA) * totalActive;
+  const decodes     = totalActive > 0 && unsatisfied < threshold;
+
+  const selectedChecks = selected == null ? [] : CHECKS_BY_COL[selected];
+
+  const toggleCheck = (i) => {
+    setRemoved(prev => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      return next;
+    });
+  };
+  const resetAll = () => { setRemoved(new Set()); setSelected(null); };
+
+  // Auto-prune: remove every check whose row has ≥ K low-entropy columns.
+  // A toggle, so the user can undo with the same button.
+  const LOW_QUALITY_K = 3;
+  const lowQualityRows = useMemo(
+    () => P_ROWS.map((_, i) => i).filter(i => ROW_LOW_COUNT[i] >= LOW_QUALITY_K),
+    []
+  );
+  const allLowQualityRemoved =
+    lowQualityRows.length > 0 && lowQualityRows.every(i => removed.has(i));
+  const autoPrune = () => {
+    if (allLowQualityRemoved) {
+      // Restore them
+      setRemoved(prev => {
+        const next = new Set(prev);
+        for (const i of lowQualityRows) next.delete(i);
+        return next;
+      });
+    } else {
+      setRemoved(prev => {
+        const next = new Set(prev);
+        for (const i of lowQualityRows) next.add(i);
+        return next;
+      });
+    }
+  };
+
+  return (
+    <div style={{
+      minHeight: 800,
+      background: "#0c0d10",
+      color: "#e8e6df",
+      fontFamily: "ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, monospace",
+      padding: "28px 32px 48px",
+      backgroundImage: "radial-gradient(circle at 20% 0%, rgba(220,180,90,0.06), transparent 50%), radial-gradient(circle at 90% 100%, rgba(120,180,220,0.05), transparent 50%)",
+    }}>
+      <header style={{ marginBottom: 28, borderBottom: "1px solid #2a2b30", paddingBottom: 20 }}>
+        <div style={{ fontSize: 11, letterSpacing: 3, color: "#8a8780", textTransform: "uppercase" }}>
+          LDPC&nbsp;·&nbsp;Pseudorandom Code&nbsp;·&nbsp;Watermark Inspector
+        </div>
+        <h1 style={{
+          fontFamily: "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif",
+          fontWeight: 400, fontStyle: "italic", fontSize: 38,
+          margin: "8px 0 4px", letterSpacing: -0.5, color: "#f4f1e8",
+        }}>
+          Px ⊕ Pz
+        </h1>
+        <div style={{ fontSize: 13, color: "#8a8780", maxWidth: 760, lineHeight: 1.5 }}>
+          {N} tokens from <span style={{ color: "#dcb45a" }}>{QWEN3_DATA.model}</span>{" "}
+          (T={QWEN3_DATA.config.temperature}, seed={QWEN3_DATA.config.seed}) ·{" "}
+          P ∈ F<sub>2</sub><sup>{R}×{N}</sup>, row sparsity t = {T_SPARSITY} ·{" "}
+          decode rule:{" "}
+          <span style={{ color: "#d8d4c8" }}>
+            wt(Px ⊕ Pz) &lt; (½ − {ZETA})·r ⟹ output 1
+          </span>
+        </div>
+      </header>
+
+      <section style={{ marginBottom: 24 }}>
+        <Label>Prompt</Label>
+        <div style={{
+          fontFamily: "'Iowan Old Style', Palatino, Georgia, serif",
+          fontSize: 16, lineHeight: 1.6, color: "#bcb8ae",
+          padding: "10px 14px", borderLeft: "2px solid #3a3b40",
+        }}>
+          {QWEN3_DATA.prompt}
+        </div>
+      </section>
+
+      <section style={{ marginBottom: 28 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10, flexWrap: "wrap", gap: 12 }}>
+          <Label>Response — click a token to inspect its parity checks</Label>
+          <Legend />
+        </div>
+        <div style={{
+          fontFamily: "'Iowan Old Style', Palatino, Georgia, serif",
+          fontSize: 18, lineHeight: 2.0,
+          padding: "16px 18px",
+          background: "rgba(255,255,255,0.015)",
+          border: "1px solid #2a2b30",
+          borderRadius: 2,
+        }}>
+          {TOKENS.map((tok, i) => {
+            const lowH = tok.H_norm < ENTROPY_THRESHOLD;
+            const isSelected = selected === i;
+            const isLitByCheck = hoverCheck != null && P_ROWS[hoverCheck].includes(i);
+            const isNewline = tok.text === "\n";
+            const isSpecial = !isNewline && tok.text.startsWith("<") && tok.text.endsWith(">");
+
+            let bg = "transparent";
+            let color = "#e8e6df";
+            let border = "1px solid transparent";
+            if (lowH)         { bg = "rgba(110,115,125,0.18)"; color = "#7d7c78"; }
+            if (isSpecial)    { bg = "rgba(120,160,200,0.14)"; color = "#9bb6cf"; border = "1px solid rgba(120,160,200,0.3)"; }
+            if (isLitByCheck) { bg = "rgba(220,180,90,0.22)"; color = "#f4e4b0"; }
+            if (isSelected)   { bg = "#dcb45a"; color = "#101012"; border = "1px solid #dcb45a"; }
+
+            const titleAttr = `token ${i} · id=${tok.id} · H=${tok.H.toFixed(3)} bits · bit=${X_BITS[i]} · in ${CHECKS_BY_COL[i].length} checks`;
+
+            // Newline tokens get a visible glyph AND an actual line break, so
+            // the rendered response respects the model's own structure.
+            if (isNewline) {
+              return (
+                <span key={i} style={{ display: "inline" }}>
+                  <span
+                    onClick={() => setSelected(isSelected ? null : i)}
+                    title={titleAttr}
+                    style={{
+                      background: bg, color: isSelected ? "#101012" : "#5a5852",
+                      border, padding: "0 4px", borderRadius: 2,
+                      fontSize: 12, cursor: "pointer", fontFamily: "ui-monospace, monospace",
+                    }}
+                  >↵</span>
+                  <br />
+                </span>
+              );
+            }
+
+            return (
+              <span
+                key={i}
+                onClick={() => setSelected(isSelected ? null : i)}
+                style={{
+                  background: bg, color, border,
+                  padding: "2px 1px", borderRadius: 2,
+                  cursor: "pointer",
+                  transition: "background 120ms, color 120ms",
+                  whiteSpace: "pre",
+                  fontFamily: isSpecial ? "ui-monospace, monospace" : "inherit",
+                  fontSize: isSpecial ? 14 : "inherit",
+                }}
+                title={titleAttr}
+              >
+                {tok.text}
+              </span>
+            );
+          })}
+        </div>
+      </section>
+
+      <section style={{
+        display: "grid",
+        gridTemplateColumns: "1.4fr 1fr",
+        gap: 24,
+      }}>
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10, gap: 8, flexWrap: "wrap" }}>
+            <Label>
+              {selected == null
+                ? `Parity checks (all ${R})`
+                : `Parity checks containing token ${selected} (id ${TOKENS[selected].id})`}
+            </Label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={autoPrune} style={allLowQualityRemoved ? btnAccentActive : btnAccent}
+                title={`Toggle removal of all ${lowQualityRows.length} parity checks with ≥ ${LOW_QUALITY_K} low-entropy columns`}>
+                {allLowQualityRemoved
+                  ? `restore ${lowQualityRows.length} low-quality`
+                  : `prune ${lowQualityRows.length} low-quality`}
+              </button>
+              <button onClick={resetAll} style={btnGhost}>reset</button>
+            </div>
+          </div>
+
+          <div style={{
+            border: "1px solid #2a2b30", borderRadius: 2,
+            maxHeight: 380, overflowY: "auto",
+          }}>
+            {(selected == null ? P_ROWS.map((_, i) => i) : selectedChecks).map(ci => {
+              const row = P_ROWS[ci];
+              const bit = checkBits[ci];
+              const isRemoved = removed.has(ci);
+              const isSat = bit === 0;
+              return (
+                <div
+                  key={ci}
+                  onMouseEnter={() => setHoverCheck(ci)}
+                  onMouseLeave={() => setHoverCheck(null)}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "76px 1fr 92px 90px",
+                    alignItems: "center",
+                    padding: "10px 14px",
+                    borderBottom: "1px solid #1e1f24",
+                    background: isRemoved ? "rgba(40,41,46,0.4)" : "transparent",
+                    opacity: isRemoved ? 0.45 : 1,
+                    fontSize: 13,
+                  }}
+                >
+                  <div style={{ color: "#8a8780", display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span>P[{String(ci).padStart(2, "0")}]</span>
+                    <span style={{
+                      fontSize: 9, letterSpacing: 1,
+                      color: ROW_LOW_COUNT[ci] >= 3 ? "#7d7c78" : "#5a5852",
+                      fontStyle: "italic",
+                    }}>
+                      {ROW_LOW_COUNT[ci]}/{T_SPARSITY} low
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {row.map(c => {
+                      const isThis = c === selected;
+                      const isLowCol = LOW_BY_TOKEN[c];
+                      return (
+                        <span key={c} style={{
+                          padding: "2px 6px", borderRadius: 2,
+                          background: isThis
+                            ? "#dcb45a"
+                            : (isLowCol ? "rgba(110,115,125,0.18)" : "rgba(255,255,255,0.04)"),
+                          color: isThis
+                            ? "#101012"
+                            : (isLowCol ? "#7d7c78" : "#bcb8ae"),
+                          border: "1px solid " + (isThis ? "#dcb45a" : "#2a2b30"),
+                          fontSize: 11,
+                        }}>
+                          x<sub>{c}</sub>={X_BITS[c]}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <div style={{
+                    color: isSat ? "#a8c98a" : "#d88a7a",
+                    fontWeight: 500, letterSpacing: 1,
+                    fontSize: 11, textTransform: "uppercase",
+                  }}>
+                    {isSat ? "● satisfied" : "○ unsat"}
+                  </div>
+                  <button
+                    onClick={() => toggleCheck(ci)}
+                    style={isRemoved ? btnRestore : btnRemove}
+                  >
+                    {isRemoved ? "restore" : "remove"}
+                  </button>
+                </div>
+              );
+            })}
+            {selected != null && selectedChecks.length === 0 && (
+              <div style={{ padding: 16, color: "#8a8780", fontSize: 13 }}>
+                This token isn't covered by any parity check in P.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <Label>Decoder readout</Label>
+          <div style={{
+            border: "1px solid #2a2b30", borderRadius: 2,
+            padding: 18, background: "rgba(255,255,255,0.015)",
+          }}>
+            <Stat label="active checks  r" value={totalActive} mono />
+            <Stat label="satisfied       (Px⊕Pz = 0)" value={satisfied} accent="#a8c98a" mono />
+            <Stat label="unsatisfied     wt(Px⊕Pz)" value={unsatisfied} accent="#d88a7a" mono />
+            <Stat label="threshold       (½ − ζ)·r" value={threshold.toFixed(2)} mono />
+
+            <div style={{ marginTop: 18, marginBottom: 8, fontSize: 10, color: "#8a8780", letterSpacing: 1, textTransform: "uppercase" }}>
+              wt(Px⊕Pz) vs threshold
+            </div>
+            <div style={{ position: "relative", height: 28, background: "#1a1b20", borderRadius: 2, overflow: "hidden" }}>
+              <div style={{
+                position: "absolute", left: 0, top: 0, bottom: 0,
+                width: totalActive ? `${(unsatisfied / totalActive) * 100}%` : 0,
+                background: decodes ? "#a8c98a" : "#d88a7a",
+                transition: "width 220ms ease-out, background 220ms",
+              }} />
+              <div style={{
+                position: "absolute",
+                left: totalActive ? `${(threshold / totalActive) * 100}%` : 0,
+                top: -2, bottom: -2, width: 1, background: "#dcb45a",
+              }} />
+              <div style={{
+                position: "absolute",
+                left: totalActive ? `${(threshold / totalActive) * 100}%` : 0,
+                top: -16, fontSize: 9, color: "#dcb45a",
+                transform: "translateX(-50%)", letterSpacing: 1,
+              }}>
+                ┃ threshold
+              </div>
+            </div>
+
+            <div style={{
+              marginTop: 22, padding: "14px 16px",
+              border: "1px solid " + (decodes ? "#3d5a2e" : "#5a3530"),
+              background: decodes ? "rgba(168,201,138,0.06)" : "rgba(216,138,122,0.06)",
+              borderRadius: 2,
+            }}>
+              <div style={{ fontSize: 10, letterSpacing: 2, color: "#8a8780", textTransform: "uppercase", marginBottom: 4 }}>
+                Decode(P, x)
+              </div>
+              <div style={{
+                fontFamily: "'Iowan Old Style', Palatino, Georgia, serif",
+                fontStyle: "italic", fontSize: 26,
+                color: decodes ? "#cde0b4" : "#e9b9ad",
+              }}>
+                {decodes ? "→ output 1  (watermark detected)" : "→ output ⊥  (rejected)"}
+              </div>
+            </div>
+
+            {removed.size > 0 && (
+              <div style={{ marginTop: 14, fontSize: 11, color: "#8a8780", lineHeight: 1.5 }}>
+                {removed.size} check{removed.size === 1 ? "" : "s"} removed from active set ·
+                fewer checks ⇒ noisier estimate of wt(Px⊕Pz) and a smaller threshold.
+              </div>
+            )}
+          </div>
+
+          {selected != null && (
+            <div style={{
+              marginTop: 16, border: "1px solid #2a2b30",
+              borderRadius: 2, padding: 14,
+              fontSize: 12, lineHeight: 1.6,
+            }}>
+              <div style={{ fontSize: 10, letterSpacing: 2, color: "#8a8780", textTransform: "uppercase", marginBottom: 6 }}>
+                Selected token
+              </div>
+              <div>index <span style={{ color: "#dcb45a" }}>{selected}</span> · text <span style={{ color: "#f4f1e8" }}>"{TOKENS[selected].text === "\n" ? "\\n" : TOKENS[selected].text}"</span> · id <span style={{ color: "#bcb8ae" }}>{TOKENS[selected].id}</span></div>
+              <div>
+                empirical entropy H<sub>e</sub> ={" "}
+                <span style={{ color: TOKENS[selected].H_norm < ENTROPY_THRESHOLD ? "#7d7c78" : "#cde0b4" }}>
+                  {fmtH(TOKENS[selected].H)} bits
+                </span>{" "}
+                {TOKENS[selected].H_norm < ENTROPY_THRESHOLD ? "(low — uninformative for detection)" : "(carries watermark signal)"}
+              </div>
+              <div>codeword bit x<sub>{selected}</sub> = {X_BITS[selected]} · pad z<sub>{selected}</sub> = {Z_PAD[selected]}</div>
+              <div>belongs to <span style={{ color: "#dcb45a" }}>{CHECKS_BY_COL[selected].length}</span> parity check{CHECKS_BY_COL[selected].length === 1 ? "" : "s"}</div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <footer style={{ marginTop: 40, fontSize: 11, color: "#5a5852", letterSpacing: 1, lineHeight: 1.6 }}>
+        tokens & entropies from real Qwen3-0.6B inference · LDPC-PRC₀ after Christ–Gunn (2024) ·{" "}
+        replace QWEN3_DATA in source to swap in your own run
+      </footer>
+    </div>
+  );
+}
+
+// ─── Small UI helpers ────────────────────────────────────────────────────────
+
+function Label({ children }) {
+  return (
+    <div style={{
+      fontSize: 10, letterSpacing: 2, color: "#8a8780",
+      textTransform: "uppercase", marginBottom: 8,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function Legend() {
+  const sw = (bg, color, label) => (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: "#8a8780" }}>
+      <span style={{ width: 14, height: 14, background: bg, color, display: "inline-block",
+                     border: "1px solid #2a2b30", borderRadius: 2 }} />
+      {label}
+    </span>
+  );
+  return (
+    <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+      {sw("rgba(110,115,125,0.18)", "#7d7c78", "low entropy")}
+      {sw("transparent", "#e8e6df", "high entropy")}
+      {sw("#dcb45a", "#101012", "selected")}
+      {sw("rgba(220,180,90,0.22)", "#f4e4b0", "in hovered check")}
+    </div>
+  );
+}
+
+// Format entropy values: scientific notation for tiny values where .toFixed(2)
+// would just round to "0.00" and lose information (Qwen3 has many of these
+// when the model is essentially deterministic at a position).
+function fmtH(h) {
+  if (h === 0) return "0";
+  if (h < 0.01) return h.toExponential(2);
+  return h.toFixed(3);
+}
+
+function Stat({ label, value, accent, mono }) {
+  return (
+    <div style={{
+      display: "flex", justifyContent: "space-between",
+      padding: "6px 0", borderBottom: "1px dotted #2a2b30",
+      fontSize: 12,
+    }}>
+      <span style={{ color: "#8a8780" }}>{label}</span>
+      <span style={{
+        color: accent || "#e8e6df",
+        fontFamily: mono ? "ui-monospace, monospace" : "inherit",
+        fontVariantNumeric: "tabular-nums",
+      }}>{value}</span>
+    </div>
+  );
+}
+
+const btnBase = {
+  fontFamily: "ui-monospace, monospace",
+  fontSize: 10, letterSpacing: 1, textTransform: "uppercase",
+  padding: "5px 10px", borderRadius: 2, cursor: "pointer",
+  transition: "all 120ms",
+};
+const btnGhost   = { ...btnBase, background: "transparent", color: "#8a8780", border: "1px solid #2a2b30" };
+const btnRemove  = { ...btnBase, background: "transparent", color: "#d88a7a", border: "1px solid #5a3530" };
+const btnRestore = { ...btnBase, background: "rgba(168,201,138,0.08)", color: "#a8c98a", border: "1px solid #3d5a2e" };
+const btnAccent       = { ...btnBase, background: "rgba(220,180,90,0.10)", color: "#dcb45a", border: "1px solid #5a4a20" };
+const btnAccentActive = { ...btnBase, background: "#dcb45a", color: "#101012", border: "1px solid #dcb45a" };
+
+    // Mount.
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<PRCVisualizer />);
+  </script>
+</body>
+</html>
