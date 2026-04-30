@@ -1,9 +1,8 @@
 ---
 title: "PRC Watermark Visualizer"
-date: 2026-04-30
+date: 2026-01-01
 description: "Interactive visualizer for exploring pseudorandom code watermarks in LLM outputs."
-tags: ["watermarking", "cryptography", "llm", "visualization"]
-demo: "/visualizers/prc/"
+tags: ["watermarking"]
 ---
 
 A pseudorandom code (PRC) watermark hides a codeword inside the bits of a sampled response.
