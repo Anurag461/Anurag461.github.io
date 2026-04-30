@@ -5,6 +5,7 @@ description: "Interactive visualizer for exploring pseudorandom code watermarks 
 tags: ["watermarking"]
 github: "https://github.com/anuragkashyap"
 demo: "/visualizers/prc/"
+permalink: /projects/prc-visualizer/
 ---
 
 A pseudorandom code (PRC) watermark hides a codeword inside the bits of a sampled response. Detection uses a soft majority vote over a sparse parity-check matrix.
