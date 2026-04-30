@@ -4,6 +4,7 @@ date: 2026-04-30
 description: "Interactive visualizer for exploring pseudorandom code watermarks in LLM outputs."
 tags: ["watermarking", "cryptography", "llm", "visualization"]
 demo: "/visualizers/prc/"
+layout: project
 ---
 
 A pseudorandom code (PRC) watermark hides a codeword inside the bits of a sampled response. Detection is a soft majority vote over a sparse parity-check matrix `P`: count how many parity checks of `Px ⊕ Pz` are unsatisfied, and output 1 if that count falls below `(½ − ζ)·r`. 
